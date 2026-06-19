@@ -17,16 +17,16 @@ const getChatbotResponse = async (req, res) => {
     const { query } = req.body;
     if (!query) return sendResponse(res, 400, false, 'Query is required');
 
-    // Fetch real public data from your Neon DB
-    const rooms = await Room.findAll({ attributes: ['room_number', 'floor', 'capacity', 'price'] });
-    const fees = await Fee.findAll({ attributes: ['amount', 'description', 'due_date'] });
+    // Fetch real public data from your Neon DB (using actual model fields)
+    const rooms = await Room.findAll({ attributes: ['room_number', 'floor', 'capacity', 'price_per_month'] });
+    const fees = await Fee.findAll({ attributes: ['amount', 'description', 'month'] });
     const wardens = await User.findAll({ where: { role: 'admin' }, attributes: ['name', 'email'] });
 
     // Create a context prompt for Gemini (with real DB data)
     const context = `
 You are a friendly hostel assistant. Use ONLY this data to answer questions:
-- ROOMS: ${rooms.map(r => `Room ${r.room_number} (Floor ${r.floor}, Capacity ${r.capacity}, ₹${r.price}/month)`).join(', ')}
-- FEES: ${fees.map(f => `${f.description}: ₹${f.amount} (Due: ${f.due_date})`).join(', ')}
+- ROOMS: ${rooms.map(r => `Room ${r.room_number} (Floor ${r.floor}, Capacity ${r.capacity}, ₹${r.price_per_month}/month)`).join(', ')}
+- FEES: ${fees.map(f => `${f.description || 'Monthly fee'}: ₹${f.amount} (For: ${f.month})`).join(', ')}
 - WARDEN: ${wardens.length > 0 ? `Name: ${wardens[0].name}, Email: ${wardens[0].email}` : 'Not available'}
 - HOSTEL RULES: Gate closes at 10 PM, mess timings: 7-9 AM (breakfast), 12-2 PM (lunch), 7-9 PM (dinner)
 If you don't know the answer, say "I don't have info about that—please contact the warden!"
