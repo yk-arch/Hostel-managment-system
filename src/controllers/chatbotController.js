@@ -5,7 +5,7 @@ const User = require('../models/userModel');
 
 // Initialize Gemini with your API key from .env
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
 
 const sendResponse = (res, statusCode, status, message, data = null) => {
   return res.status(statusCode).json({ status, message, data });
