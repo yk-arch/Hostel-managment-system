@@ -13,14 +13,17 @@ const sendResponse = (res, statusCode, status, message, data = null) => {
 
 // Handle chatbot queries with Gemini + real Neon DB data
 const getChatbotResponse = async (req, res) => {
+  console.log('📨 Chatbot request received:', req.body);
   try {
     const { query } = req.body;
     if (!query) return sendResponse(res, 400, false, 'Query is required');
 
     // Fetch real public data from your Neon DB (using actual model fields)
+    console.log('📊 Fetching data from DB...');
     const rooms = await Room.findAll({ attributes: ['room_number', 'floor', 'capacity', 'price_per_month'] });
     const fees = await Fee.findAll({ attributes: ['amount', 'description', 'month'] });
     const wardens = await User.findAll({ where: { role: 'admin' }, attributes: ['name', 'email'] });
+    console.log('✅ Data fetched:', { roomsCount: rooms.length, feesCount: fees.length, wardensCount: wardens.length });
 
     // Create a context prompt for Gemini (with real DB data)
     const context = `
@@ -33,13 +36,16 @@ If you don't know the answer, say "I don't have info about that—please contact
 `;
 
     // Ask Gemini to generate a response
+    console.log('🤖 Asking Gemini for response...');
     const result = await model.generateContent(`${context}\n\nUser Query: ${query}`);
     const response = result.response.text().trim();
+    console.log('✅ Gemini response:', response);
 
     return sendResponse(res, 200, true, 'Response generated', { response });
   } catch (error) {
-    console.error('Chatbot error:', error);
-    return sendResponse(res, 500, false, 'Server error—please try again later');
+    console.error('❌ Chatbot error:', error.message);
+    console.error('❌ Full error:', error);
+    return sendResponse(res, 500, false, `Server error: ${error.message}`);
   }
 };
 
