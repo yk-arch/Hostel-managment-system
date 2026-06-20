@@ -1,6 +1,7 @@
 const Room = require('../models/roomModel');
 const Fee = require('../models/feeModel');
 const User = require('../models/userModel');
+const Student = require('../models/studentModel');
 
 const sendResponse = (res, statusCode, status, message, data = null) => {
   return res.status(statusCode).json({ status, message, data });
@@ -21,7 +22,13 @@ const getChatbotResponse = async (req, res) => {
     const rooms = await Room.findAll({ attributes: ['room_number', 'floor', 'capacity', 'price_per_month'] });
     const fees = await Fee.findAll({ attributes: ['amount', 'description', 'month'] });
     const wardens = await User.findAll({ where: { role: 'admin' }, attributes: ['name', 'email'] });
-    console.log('✅ Data fetched:', { roomsCount: rooms.length, feesCount: fees.length, wardensCount: wardens.length });
+    const students = await Student.findAll({ attributes: ['id'] });
+    console.log('✅ Data fetched:', { 
+      roomsCount: rooms.length, 
+      feesCount: fees.length, 
+      wardensCount: wardens.length,
+      studentsCount: students.length,
+    });
 
     // Rule: Hi/Hello
     if (q.includes('hi') || q.includes('hello')) {
@@ -61,9 +68,14 @@ const getChatbotResponse = async (req, res) => {
       response = "Hostel Rules & Timings:\n- Gate opens at 6 AM, closes at 10 PM\n- Mess: 7-9 AM (breakfast), 12-2 PM (lunch), 7-9 PM (dinner)";
     }
 
+    // Rule: Students
+    else if (q.includes('student')) {
+      response = `We currently have ${students.length} students in the hostel!`;
+    }
+
     // Rule: Help
     else if (q.includes('help')) {
-      response = "I can help you with:\n1. Room availability and prices\n2. Fee details\n3. Warden contact info\n4. Hostel rules and timings\nJust ask your question!";
+      response = "I can help you with:\n1. Room availability and prices\n2. Fee details\n3. Student count\n4. Warden contact info\n5. Hostel rules and timings\nJust ask your question!";
     }
 
     console.log('✅ Chatbot response:', response);
