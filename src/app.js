@@ -27,6 +27,7 @@ const complaintRoutes = require('./routes/complaintRoutes');
 const expenditureRoutes =
   require('./routes/expenditureRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // ─── DEFINE ALL ASSOCIATIONS ──────────────────
 // This tells Sequelize how tables relate to each other
@@ -116,6 +117,7 @@ app.use('/api/laundry', laundryRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/expenditures', expenditureRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ─── HEALTH CHECK ─────────────────────────────
 app.get('/api/health', (req, res) => {

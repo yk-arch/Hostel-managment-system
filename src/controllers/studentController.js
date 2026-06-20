@@ -1,4 +1,5 @@
 const Student = require('../models/studentModel');
+const Notification = require('../models/notificationModel');
 const { Op } = require('sequelize');
 
 const sendResponse = (res, statusCode, status, message, data = null) => {
@@ -38,6 +39,14 @@ exports.createStudent = async (req, res) => {
       return sendResponse(res, 400, false, 'Name and phone are required');
     }
     const student = await Student.create({ name, email, phone, cnic, father_name, address, room_no });
+    
+    // Create notification
+    await Notification.create({
+      title: 'New Student Added',
+      message: `New student ${name} has been added to the hostel!`,
+      type: 'success',
+    });
+
     return sendResponse(res, 201, true, 'Student created successfully', { student });
   } catch (e) {
     console.error('Create student error:', e);

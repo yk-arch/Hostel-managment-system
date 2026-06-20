@@ -1,5 +1,6 @@
 const Complaint = require('../models/complaintModel');
 const Student = require('../models/studentModel');
+const Notification = require('../models/notificationModel');
 const { Op } = require('sequelize');
 
 const sendResponse = (res, statusCode, status, message, data = null) => {
@@ -80,6 +81,13 @@ const createComplaint = async (req, res) => {
       description,
       category: category || 'general',
       status: 'open',
+    });
+
+    // Create notification
+    await Notification.create({
+      title: 'New Complaint Received',
+      message: `New complaint from ${student.name}: ${title}`,
+      type: 'warning',
     });
 
     const complaintWithStudent = await Complaint.findByPk(

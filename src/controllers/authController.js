@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/userModel');
+const Notification = require('../models/notificationModel');
 const { sendResetPasswordEmail } = require('../utils/emailService');
 require('dotenv').config();
 
@@ -37,6 +38,13 @@ const register = async (req, res) => {
       name, email,
       password: hashedPassword,
       role: role || 'admin',
+    });
+
+    // Create notification
+    await Notification.create({
+      title: 'New User Registered',
+      message: `New user ${name} has registered!`,
+      type: 'info',
     });
 
     const token = generateToken(user.id, user.email, user.role);
