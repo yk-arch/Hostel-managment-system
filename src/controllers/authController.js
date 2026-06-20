@@ -192,4 +192,41 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { register, login, logout, forgotPassword, resetPassword, getMe };
+// ─── UPDATE USER ROLE (ADMIN ONLY) ────────────
+const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!['admin', 'staff', 'student'].includes(role)) {
+      return sendResponse(res, 400, false, 'Invalid role');
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return sendResponse(res, 404, false, 'User not found');
+    }
+
+    await user.update({ role });
+
+    return sendResponse(res, 200, true, 'User role updated', { user });
+  } catch (error) {
+    console.error('Update user role error:', error);
+    return sendResponse(res, 500, false, 'Server error.');
+  }
+};
+
+// ─── GET ALL USERS (ADMIN ONLY) ───────────────
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: { exclude: ['password', 'reset_token', 'reset_token_expiry'] },
+    });
+    return sendResponse(res, 200, true, 'Users fetched', { users });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    return sendResponse(res, 500, false, 'Server error.');
+  }
+};
+
+module.exports = { register, login, logout, forgotPassword, resetPassword, getMe, updateUserRole, getAllUsers };
