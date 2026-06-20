@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/userModel');
 const Notification = require('../models/notificationModel');
+const Student = require('../models/studentModel');
 const { sendResetPasswordEmail } = require('../utils/emailService');
 require('dotenv').config();
 
@@ -21,27 +22,33 @@ const sendResponse = (res, statusCode, status, message, data = null) => {
 // ─── REGISTER ────────────────────────────────
 const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, phone, password, role, admin_secret } = req.body;
 
     if (!name || !email || !password) {
       return sendResponse(res, 400, false,
         'Name, email and password are required');
     }
 
+    // Debug log: Check existing user
     const existingUser = await User.findOne({ where: { email } });
+    console.log('Existing user check:', existingUser ? 'User exists' : 'No user');
     if (existingUser) {
       return sendResponse(res, 409, false, 'Email is already registered');
     }
 
-    // Check total users to make first user admin
+    // Debug log: Check total users
     const totalUsers = await User.count();
+    console.log('Total users in DB:', totalUsers);
     let finalRole = role || 'student';
     if (totalUsers === 0) {
       finalRole = 'admin'; // First user is always admin
+      console.log('Setting role to ADMIN (first user)');
+    } else if (admin_secret === process.env.ADMIN_SECRET) {
+      // Allow creating admin with secret key
+      finalRole = 'admin';
+      console.log('Setting role to ADMIN (admin secret)');
     } else {
       // Prevent non-admins from creating admin accounts
-      // If req.user exists (protected route), check if they are admin
-      // For open registration, restrict admin role
       finalRole = (role === 'admin') ? 'student' : (role || 'student');
     }
 
@@ -51,6 +58,15 @@ const register = async (req, res) => {
       password: hashedPassword,
       role: finalRole,
     });
+
+    // Auto-create student entry if role is student
+    if (finalRole === 'student') {
+      await Student.create({
+        name: name,
+        email: email,
+        phone: phone || 'N/A',
+      });
+    }
 
     // Create notification
     await Notification.create({
