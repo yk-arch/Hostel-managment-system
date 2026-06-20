@@ -33,11 +33,23 @@ const register = async (req, res) => {
       return sendResponse(res, 409, false, 'Email is already registered');
     }
 
+    // Check total users to make first user admin
+    const totalUsers = await User.count();
+    let finalRole = role || 'student';
+    if (totalUsers === 0) {
+      finalRole = 'admin'; // First user is always admin
+    } else {
+      // Prevent non-admins from creating admin accounts
+      // If req.user exists (protected route), check if they are admin
+      // For open registration, restrict admin role
+      finalRole = (role === 'admin') ? 'student' : (role || 'student');
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       name, email,
       password: hashedPassword,
-      role: role || 'admin',
+      role: finalRole,
     });
 
     // Create notification
