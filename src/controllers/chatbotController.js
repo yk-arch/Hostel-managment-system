@@ -1,22 +1,20 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Room = require('../models/roomModel');
 const Fee = require('../models/feeModel');
 const User = require('../models/userModel');
-
-// Initialize Gemini with your API key from .env
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
 
 const sendResponse = (res, statusCode, status, message, data = null) => {
   return res.status(statusCode).json({ status, message, data });
 };
 
-// Handle chatbot queries with Gemini + real Neon DB data
+// Rule-based chatbot (works without AI)
 const getChatbotResponse = async (req, res) => {
   console.log('📨 Chatbot request received:', req.body);
   try {
     const { query } = req.body;
     if (!query) return sendResponse(res, 400, false, 'Query is required');
+
+    const q = query.toLowerCase();
+    let response = "Hello! I'm your Hostel Assistant. Ask me about rooms, fees, the warden, or hostel rules!";
 
     // Fetch real public data from your Neon DB (using actual model fields)
     console.log('📊 Fetching data from DB...');
@@ -25,22 +23,50 @@ const getChatbotResponse = async (req, res) => {
     const wardens = await User.findAll({ where: { role: 'admin' }, attributes: ['name', 'email'] });
     console.log('✅ Data fetched:', { roomsCount: rooms.length, feesCount: fees.length, wardensCount: wardens.length });
 
-    // Create a context prompt for Gemini (with real DB data)
-    const context = `
-You are a friendly hostel assistant. Use ONLY this data to answer questions:
-- ROOMS: ${rooms.map(r => `Room ${r.room_number} (Floor ${r.floor}, Capacity ${r.capacity}, ₹${r.price_per_month}/month)`).join(', ')}
-- FEES: ${fees.map(f => `${f.description || 'Monthly fee'}: ₹${f.amount} (For: ${f.month})`).join(', ')}
-- WARDEN: ${wardens.length > 0 ? `Name: ${wardens[0].name}, Email: ${wardens[0].email}` : 'Not available'}
-- HOSTEL RULES: Gate closes at 10 PM, mess timings: 7-9 AM (breakfast), 12-2 PM (lunch), 7-9 PM (dinner)
-If you don't know the answer, say "I don't have info about that—please contact the warden!"
-`;
+    // Rule: Hi/Hello
+    if (q.includes('hi') || q.includes('hello')) {
+      response = "Hello! Welcome to the Hostel Assistant! How can I help you today?";
+    }
 
-    // Ask Gemini to generate a response
-    console.log('🤖 Asking Gemini for response...');
-    const result = await model.generateContent(`${context}\n\nUser Query: ${query}`);
-    const response = result.response.text().trim();
-    console.log('✅ Gemini response:', response);
+    // Rule: Rooms
+    else if (q.includes('room')) {
+      if (rooms.length > 0) {
+        const availableCount = rooms.filter(r => r.capacity > 0).length;
+        response = `We have ${rooms.length} total rooms, with ${availableCount} available! Here are some details: ${rooms.map(r => `Room ${r.room_number} (Floor ${r.floor}, ₹${r.price_per_month}/month, Capacity: ${r.capacity})`).join('; ')}`;
+      } else {
+        response = "We don't have any rooms listed yet—please check back later!";
+      }
+    }
 
+    // Rule: Fees
+    else if (q.includes('fee')) {
+      if (fees.length > 0) {
+        response = `Here are our current fees: ${fees.map(f => `${f.description || 'Monthly fee'}: ₹${f.amount} (${f.month})`).join('; ')}`;
+      } else {
+        response = "We don't have any fees listed yet—please contact the warden!";
+      }
+    }
+
+    // Rule: Warden
+    else if (q.includes('warden') || q.includes('contact')) {
+      if (wardens.length > 0) {
+        response = `You can contact the warden at: ${wardens.map(w => `${w.name} (${w.email})`).join(', ')}`;
+      } else {
+        response = "Warden information is not available yet—please check back later!";
+      }
+    }
+
+    // Rule: Rules/Timings
+    else if (q.includes('rule') || q.includes('time') || q.includes('gate') || q.includes('mess')) {
+      response = "Hostel Rules & Timings:\n- Gate opens at 6 AM, closes at 10 PM\n- Mess: 7-9 AM (breakfast), 12-2 PM (lunch), 7-9 PM (dinner)";
+    }
+
+    // Rule: Help
+    else if (q.includes('help')) {
+      response = "I can help you with:\n1. Room availability and prices\n2. Fee details\n3. Warden contact info\n4. Hostel rules and timings\nJust ask your question!";
+    }
+
+    console.log('✅ Chatbot response:', response);
     return sendResponse(res, 200, true, 'Response generated', { response });
   } catch (error) {
     console.error('❌ Chatbot error:', error.message);
