@@ -39,7 +39,13 @@ const getChatbotResponse = async (req, res) => {
     else if (q.includes('room')) {
       if (rooms.length > 0) {
         const availableCount = rooms.filter(r => r.capacity > 0).length;
-        response = `We have ${rooms.length} total rooms, with ${availableCount} available! Here are some details: ${rooms.map(r => `Room ${r.room_number} (Floor ${r.floor}, ₹${r.price_per_month}/month, Capacity: ${r.capacity})`).join('; ')}`;
+        const maxRoomsToShow = 3;
+        const roomsToShow = rooms.slice(0, maxRoomsToShow);
+        let roomsText = roomsToShow.map(r => `Room ${r.room_number} (Floor ${r.floor}, ₹${r.price_per_month}/month)`).join(', ');
+        if (rooms.length > maxRoomsToShow) {
+          roomsText += `, and ${rooms.length - maxRoomsToShow} more`;
+        }
+        response = `We have ${rooms.length} total rooms (${availableCount} available)! Some rooms: ${roomsText}`;
       } else {
         response = "We don't have any rooms listed yet—please check back later!";
       }
@@ -48,7 +54,13 @@ const getChatbotResponse = async (req, res) => {
     // Rule: Fees
     else if (q.includes('fee')) {
       if (fees.length > 0) {
-        response = `Here are our current fees: ${fees.map(f => `${f.description || 'Monthly fee'}: ₹${f.amount} (${f.month})`).join('; ')}`;
+        const maxFeesToShow = 3;
+        const feesToShow = fees.slice(0, maxFeesToShow);
+        let feesText = feesToShow.map(f => `${f.description || 'Monthly fee'}: ₹${f.amount}`).join(', ');
+        if (fees.length > maxFeesToShow) {
+          feesText += `, and ${fees.length - maxFeesToShow} more`;
+        }
+        response = `Here are our current fees: ${feesText}`;
       } else {
         response = "We don't have any fees listed yet—please contact the warden!";
       }
